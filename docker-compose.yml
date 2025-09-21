@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: claims_postgres
+    environment:
+      POSTGRES_DB: claims_db
+      POSTGRES_USER: claims_user
+      POSTGRES_PASSWORD: claims_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - claims_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: claims_backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://claims_user:claims_password@postgres:5432/claims_db
+      JWT_SECRET: your-secret-key-change-in-production
+    depends_on:
+      - postgres
+    volumes:
+      - ./backend:/app
+      - uploads_data:/app/uploads
+    networks:
+      - claims_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: claims_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - claims_network
+
+volumes:
+  postgres_data:
+  uploads_data:
+
+networks:
+  claims_network:
+    driver: bridge
